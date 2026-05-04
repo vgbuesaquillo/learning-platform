@@ -1,0 +1,31 @@
+version: "3.9"
+
+# Archivo de producción — usar con:
+# docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+
+services:
+  backend:
+    build:
+      target: production
+    environment:
+      ENVIRONMENT: production
+    volumes: []   # No montar código fuente en producción
+    restart: always
+
+  frontend:
+    build:
+      target: production
+    environment:
+      WATCHPACK_POLLING: "false"
+    volumes: []
+    restart: always
+
+  db:
+    restart: always
+
+  redis:
+    restart: always
+
+  # No exponer Adminer en producción
+  adminer:
+    profiles: ["debug"]  # Solo activo con --profile debug
