@@ -49,44 +49,61 @@ class KnowledgeInferenceService:
 
     def update_mastery_from_interaction(self, user_progress: UserProgress, interaction_data: Dict[str, Any]):
         """
-        Updates user_progress mastery_level based on a single interaction.
-        This method should be called AFTER a UserInteraction record is created.
-        It analyzes the interaction and applies its impact on mastery.
+        Updates user_progress mastery_level and recurrence_score based on a single interaction.
+        This method analyzes the interaction and applies its impact on mastery,
+        considering interaction type, current mastery, and usage history.
         """
         interaction_type = interaction_data.get("interaction_type")
-        # The interaction_data would typically come from the UserInteraction object saved in DB
-        # For simulation purposes, we might pass relevant parts.
+        context_data = interaction_data.get("context_data", {})
+
+        if not interaction_type:
+            # If interaction_type is missing, log a warning or skip update affecting mastery
+            print(f"Warning: Interaction type missing for update. Skipping mastery update.")
+            return
 
         weight = INTERACTION_WEIGHTS.get(interaction_type, 0.5) # Default weight if type is unknown
 
-        # Simple mastery increase logic: apply weight directly or proportionally
-        # A more complex model could consider context_data, evidence score, etc.
-        #
-        # Example: Mastery increases based on weight, capped by MAX_USAGE_WEIGHTING effect.
-        # New items start with 0 mastery.
+        # --- Mastery Level Update ---
+        # Make mastery gain more gradual, especially at higher levels.
+        # Gain is modulated by interaction weight, capped by MAX_USAGE_WEIGHTING effect,
+        # and reduced if mastery is already high.
+        current_mastery = user_progress.mastery_level
+        # Base gain: interaction weight normalized by max usage effect
+        base_gain = weight / MAX_USAGE_WEIGHTING
 
-        # If mastery_level is already high, further increases might be smaller.
-        # For now, a simple additive model.
+        # Modulation: reduce gain if mastery is already high.
+        # For example, if mastery is 0.8, reduce gain by 50%. If 0.9, by 75%.
+        mastery_modulation = 1.0 - (current_mastery * 0.75) # Higher modulation at higher mastery
+        mastery_modulation = max(0.2, mastery_modulation) # Ensure a minimum gain factor
 
-        mastery_gain = weight / MAX_USAGE_WEIGHTING # Normalize gain based on max usage effect
-        user_progress.mastery_level = min(1.0, user_progress.mastery_level + mastery_gain)
+        mastery_gain = base_gain * mastery_modulation
+        user_progress.mastery_level = min(1.0, current_mastery + mastery_gain)
 
-        # Recurrence score usually decreases with practice or stays low if mastery is gained.
-        # When an item is practiced successfully, its recurrence need might decrease.
-        # For simplicity, we'll make recurrence_score decrease slightly here.
-        user_progress.recurrence_score = max(0, user_progress.recurrence_score - 1) # Reduce recurrence need
+        # --- Recurrence Score Update ---
+        # Successful interactions should reduce the need for recurrence.
+        # Decrease score, but ensure it doesn't go below a minimum threshold if mastery is low.
+        # If mastery is high, recurrence can decrease more.
+        recurrence_reduction = 1 + int(weight * 0.5) # More reduction for higher weight interactions
+        if user_progress.mastery_level > 0.7: # If quite mastered, reduce recurrence more
+             recurrence_reduction += 0.5
+
+        user_progress.recurrence_score = max(0, user_progress.recurrence_score - recurrence_reduction)
 
         user_progress.last_practiced_at = datetime.datetime.now(datetime.timezone.utc)
 
-        # Add to history (simplified)
+        # --- History Logging ---
         user_progress.history.append({
             "timestamp": user_progress.last_practiced_at.isoformat(),
             "type": interaction_type,
-            "mastery_change": mastery_gain,
-            "new_mastery": user_progress.mastery_level
+            "interaction_context": context_data, # Log context data
+            "mastery_change": round(mastery_gain, 4),
+            "new_mastery": round(user_progress.mastery_level, 4),
+            "recurrence_change": -recurrence_reduction,
+            "new_recurrence": user_progress.recurrence_score
         })
 
         self.db.flush()
+
 
 
     def apply_forgetting_decay(self, user_progress: UserProgress):
