@@ -76,13 +76,26 @@ def test_duplicate_email_registration_returns_400(client: TestClient):
 # --- Test Evidence Flow (Create, Submit, Review) ---
 def test_student_can_create_evidence(client: TestClient, student_token: str, db_session: Session):
     """Tests the flow of a student creating an evidence draft."""
-    # We need an activity ID to create evidence. Assuming one exists or can be created.
-    # For simplicity, let's mock an activity post if needed, or assume one is pre-populated.
-    # If Activity model needs setup:
-    # E.g., create an activity through an API or directly in DB for test.
-    # For now, let's assume Activity ID 'some_activity_id_uuid' exists.
-    # You'll need to replace 'some_activity_id_uuid' with an actual UUID if running this.
-    activity_id_uuid = "f47ac10b-58cc-4372-a567-0e02b2c3d479" # Example UUID
+    # Import Activity model for creating mock data
+    from app.domain.models import Activity
+    from uuid import UUID as UUIDType
+
+    # Create a mock activity using the db_session
+    mock_activity = Activity(
+        id=UUIDType("f47ac10b-58cc-4372-a567-0e02b2c3d479"), # Use a consistent mock UUID
+        title="Mock Activity for Testing",
+        description="This is a mock activity for testing purposes.",
+        evidence_type="activity",
+        rubric={"criteria": {"content": {"max_score": 100, "description": "Content quality"}}},
+        max_score=100.0,
+        is_required=True,
+        module_id=UUIDType("a1b2c3d4-e5f6-7890-1234-567890abcdef") # Mock module_id, assuming it exists
+    )
+    db_session.add(mock_activity)
+    db_session.commit()
+    db_session.refresh(mock_activity) # Ensure mock_activity has its ID populated if generated
+
+    activity_id_uuid = str(mock_activity.id) # Use the ID of the created mock activity
 
     response = client.post("/api/v1/evidence/",
                            json={
@@ -102,7 +115,27 @@ def test_student_can_create_evidence(client: TestClient, student_token: str, db_
 def test_student_can_submit_evidence(client: TestClient, student_token: str, db_session: Session):
     """Tests the student submitting their evidence draft for review."""
     # First, create evidence
-    activity_id_uuid = "f47ac10b-58cc-4372-a567-0e02b2c3d479"
+    # Import Activity model for creating mock data
+    from app.domain.models import Activity
+    from uuid import UUID as UUIDType
+
+    # Create a mock activity using the db_session
+    mock_activity = Activity(
+        id=UUIDType("f47ac10b-58cc-4372-a567-0e02b2c3d479"), # Use a consistent mock UUID
+        title="Mock Activity for Testing - Submit",
+        description="This is a mock activity for testing submission.",
+        evidence_type="activity",
+        rubric={"criteria": {"content": {"max_score": 100, "description": "Content quality"}}},
+        max_score=100.0,
+        is_required=True,
+        module_id=UUIDType("a1b2c3d4-e5f6-7890-1234-567890abcdef") # Mock module_id, assuming it exists
+    )
+    db_session.add(mock_activity)
+    db_session.commit()
+    db_session.refresh(mock_activity)
+
+    activity_id_uuid = str(mock_activity.id) # Use the ID of the created mock activity
+
     create_response = client.post("/api/v1/evidence/",
                                 json={
                                     "activity_id": activity_id_uuid,
@@ -140,13 +173,53 @@ def test_student_cannot_submit_already_submitted_evidence(client: TestClient, st
     assert "Only drafts can be submitted" in response.json()["detail"]
 
 def test_instructor_can_review_evidence(client: TestClient, instructor_token: str, student_token: str, db_session: Session):
-    """Tests instructor reviewing an evidence and updating its status and score."""
-    # Create and submit evidence by a student
-    activity_id_uuid = "f47ac10b-58cc-4372-a567-0e02b2c3d479" # Example Activity ID
+    # --- Setup: Create mock data ---
+    # Import necessary models and UUID for creating mock data
+    from app.domain.models import Activity, Theme, LearningItem, UserProgress
+    from uuid import UUID as UUIDType
+
+    # Mock Activity
+    activity_id_uuid = UUIDType("f47ac10b-58cc-4372-a567-0e02b2c3d479")
+    mock_activity = Activity(
+        id=activity_id_uuid,
+        title="Mock Activity for Review",
+        description="Activity for testing evidence review.",
+        evidence_type="activity",
+        rubric={"criteria": {"content": {"max_score": 100, "description": "Content quality"}}},
+        max_score=100.0, is_required=True, module_id=UUIDType("a1b2c3d4-e5f6-7890-1234-567890abcdef")
+    )
+    db_session.add(mock_activity)
+
+    # Mock Theme
+    theme_id_uuid = UUIDType("b2c3d4e5-f678-9012-3456-7890abcdef12")
+    mock_theme = Theme(
+        id=theme_id_uuid,
+        name="Mock Theme for NLP Test",
+        description="Theme for testing NLP integration.",
+        order=1, is_active=True
+    )
+    db_session.add(mock_theme)
+
+    # Mock LearningItem associated with the theme
+    learning_item_id_uuid = UUIDType("c3d4e5f6-7890-1234-5678-90abcdef1234")
+    mock_learning_item = LearningItem(
+        id=learning_item_id_uuid,
+        theme_id=theme_id_uuid,
+        item_type="concept",
+        content="Concept related to NLP and Machine Learning",
+        metadata={"difficulty": "intermediate"},
+    )
+    db_session.add(mock_learning_item)
+
+    db_session.commit() # Commit all mock data
+
+    # --- Create and Submit Evidence ---
     create_response = client.post("/api/v1/evidence/",
                                 json={
-                                    "activity_id": activity_id_uuid,
-                                    "content": "Student's evidence for review.",
+                                    "activity_id": str(activity_id_uuid),
+                                    "content": "This evidence content about NLP and ML.", # Content that might trigger NLP association
+                                    "reflection": "I feel confident about this.",
+                                    "confidence_level": 4.0
                                 },
                                 headers={"Authorization": f"Bearer {student_token}"})
     assert create_response.status_code == 201
@@ -156,11 +229,11 @@ def test_instructor_can_review_evidence(client: TestClient, instructor_token: st
                                   headers={"Authorization": f"Bearer {student_token}"})
     assert submit_response.status_code == 200
 
-    # Instructor reviews the evidence
+    # --- Instructor reviews the evidence ---
     review_data = {
         "score": 95.5,
-        "qualitative_feedback": "Excellent work!",
-        "rubric_evaluation": {"communication": 10, "content": 9}
+        "qualitative_feedback": "Excellent work with NLP terms!",
+        "rubric_evaluation": {"content": 95.5}
     }
     response = client.post(f"/api/v1/evidence/{evidence_id}/review",
                            json=review_data,

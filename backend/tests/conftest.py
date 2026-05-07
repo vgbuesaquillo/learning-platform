@@ -8,11 +8,17 @@ from app.main import app
 
 # --- Path Adjustment for Imports ---
 # Add the 'backend' directory to sys.path so that 'app' package can be imported.
-# This assumes the conftest.py is located in `backend/tests/`.
-TEST_DIR = os.path.dirname(os.path.abspath(__file__))
-BACKEND_DIR = os.path.abspath(os.path.join(TEST_DIR, os.pardir, os.pardir)) # Points to 'backend' directory
-if BACKEND_DIR not in sys.path:
-    sys.path.insert(0, BACKEND_DIR)
+# This assumes conftest.py is in `backend/tests/` and pytest is run from the project root.
+try:
+    import os
+    import sys
+    # Get the project root directory (where .git is located)
+    PROJECT_ROOT = os.getcwd()
+    BACKEND_DIR = os.path.join(PROJECT_ROOT, "backend")
+    if BACKEND_DIR not in sys.path:
+        sys.path.insert(0, BACKEND_DIR)
+except Exception as e:
+    print(f"Warning: Failed to adjust sys.path for backend imports: {e}")
 # --- End Path Adjustment ---
 
 # In-memory SQLite DB for tests

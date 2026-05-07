@@ -11,7 +11,12 @@
       "Bash(pytest *)",
       "Bash(python -m pip install --upgrade pip)",
       "Bash(pip install *)",
-      "Bash(python *)"
+      "Bash(python *)",
+      "PowerShell(pip install *)",
+      "PowerShell(pytest *)",
+      "PowerShell(python -m pytest backend/tests -q)",
+      "PowerShell($env:PYTHONPATH = \"backend\"; python -m pytest backend/tests -q)",
+      "PowerShell(git *)"
     ]
   }
 }
