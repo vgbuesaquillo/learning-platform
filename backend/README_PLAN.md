@@ -1,0 +1,1 @@
+Updated plan execution committed: RBAC, NLP placeholder, E2E tests and forgetting decay scheduler implemented. Next steps: run test suite, fix issues, and iterate.
