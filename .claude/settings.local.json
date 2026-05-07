@@ -8,7 +8,10 @@
       "Bash(Select-Object Name)",
       "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\USUARIO\\\\Documents\\\\RESPALDO_COMPU_VIEJO\\\\COMPUTADOR_VIEJO\\\\DOCUMENTOS\\\\kmds\\\\learning_platform\" -Force)",
       "Bash(Select-Object -First 30)",
-      "Bash(pytest *)"
+      "Bash(pytest *)",
+      "Bash(python -m pip install --upgrade pip)",
+      "Bash(pip install *)",
+      "Bash(python *)"
     ]
   }
 }

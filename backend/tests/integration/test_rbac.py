@@ -1,9 +1,29 @@
+import os
+import sys
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 from app.domain.models import User, LearningEvidence # Import models needed for tests
 from app.core.security import create_access_token
 from datetime import timedelta
+# Import SQLAlchemy Base
+from sqlalchemy.ext.declarative import declarative_base
+
+# --- Path Adjustment for Imports ---
+# Add the 'backend' directory to sys.path so that 'app' package can be imported.
+# This assumes the test file is located at:
+# C:\Users\USUARIO\Documents\RESPALDO_COMPU_VIEJO\COMPUTADOR_VIEJO\DOCUMENTOS\kmds\learning_platform\backend\tests\integration\test_rbac.py
+# The script expects to be run from the project root or have backend/app discoverable.
+# The path calculation below aims to find the project root and add 'backend' to sys.path.
+TEST_FILE_DIR = os.path.dirname(os.path.abspath(__file__))
+# Traverse up from tests/integration/ to the backend directory
+BACKEND_DIR = os.path.abspath(os.path.join(TEST_FILE_DIR, os.pardir, os.pardir))
+if BACKEND_DIR not in sys.path:
+    sys.path.insert(0, BACKEND_DIR)
+# --- End Path Adjustment ---
+
+# SQLAlchemy declarative base
+Base = declarative_base()
 
 # Assuming your main app is accessible via 'app'
 # Assuming your db fixture, student_token, instructor_token are available from conftest.py
@@ -84,12 +104,12 @@ def test_student_cannot_access_other_user_progress_dashboard(client: TestClient,
 #     assert response.status_code == 200
 #
 # def test_access_other_user_profile_fails_for_student(client: TestClient, student_token: str, other_user_id: UUID):
-#     response = client.get(f"/api/v1/users/{other_user_id}", headers={"Authorization": f"Bearer {student_token}"})
+#     response = client.get(f"/v1/users/{other_user_id}", headers={"Authorization": f"Bearer {student_token}")}
 #     assert response.status_code == 403
 #     assert response.json()["detail"] == "Acceso denegado: recurso de otro usuario"
 #
 # def test_access_other_user_profile_succeeds_for_instructor(client: TestClient, instructor_token: str, other_user_id: UUID):
-#     response = client.get(f"/api/v1/users/{other_user_id}", headers={"Authorization": f"Bearer {instructor_token}"})
+#     response = client.get(f"/v1/users/{other_user_id}", headers={"Authorization": f"Bearer {token}")}
 #     assert response.status_code == 200
 
 # --- Setup for potentially needed fixture data (if not provided by main conftest) ---
