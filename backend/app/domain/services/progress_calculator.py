@@ -10,9 +10,9 @@ Calcula métricas más allá del porcentaje de avance:
 from typing import List, Optional
 from datetime import datetime, timezone
 from app.domain.models import (
-    LearningEvidence, CompetencyProgress,
-    DomainLevel, EvidenceStatus
+    LearningEvidence, DomainLevel, EvidenceStatus
 )
+from app.domain.schemas import CompetencyProgress
 
 
 LEVEL_THRESHOLDS = {

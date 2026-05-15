@@ -3,7 +3,7 @@
  * Maneja autenticación JWT y errores de forma centralizada.
  */
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:9000";
 
 class ApiError extends Error {
   constructor(public status: number, message: string) {

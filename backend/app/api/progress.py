@@ -1,24 +1,23 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from typing import List, Optional, Dict, Any, UUID as UUID_TYPE
+from typing import List, Optional, Dict, Any
+from uuid import UUID as UUID_TYPE
 from datetime import datetime, timezone
 
 from app.infrastructure.database import get_db
 from app.core.dependencies import get_current_user, require_instructor, require_own_resource # Import new dependencies
-from app.domain.models import User, UserProgress, LearningItem, Theme # Import necessary models
+from app.domain.models import User, UserProgress, LearningItem, Theme, LearningEvidence
 from app.domain.schemas import LearningDashboard, NextLearningItemsResponse # Import relevant schemas
-from app.core.knowledge_inference_service import KnowledgeInferenceService
+from app.domain.services.knowledge_inference import KnowledgeInferenceService
 
 router = APIRouter(prefix="/progress", tags=["Progress"])
 
 # --- Helper to get active theme ---
 def get_active_theme(db: Session) -> Theme:
-    """Fetches the active theme, defaulting to 'Inglés' or the first active one."""
-    active_theme = db.query(Theme).filter(Theme.name == "Inglés", Theme.is_active == True).first()
+    """Fetches the first active theme."""
+    active_theme = db.query(Theme).filter(Theme.is_active == True).order_by(Theme.order).first()
     if not active_theme:
-        active_theme = db.query(Theme).filter(Theme.is_active == True).order_by(Theme.order).first()
-        if not active_theme:
-             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No active theme found.")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No active theme found.")
     return active_theme
 
 # --- Progress Endpoints ---
@@ -96,7 +95,7 @@ def get_user_dashboard(
         approved_evidences=approved_evidences,
         avg_confidence_vs_score=dashboard_data.get("avg_confidence_vs_score", 0.0),
         consistency_index=dashboard_data.get("consistency_index", 0.0),
-        competency_breakdown=dashboard_data.get("heatmap", {}),
+        competency_breakdown=dashboard_data.get("heatmap", []),
     )
 
 @router.get("/next", response_model=NextLearningItemsResponse)

@@ -30,7 +30,7 @@ def create_learning_item(
         theme_id=item.theme_id,
         item_type=item.item_type,
         content=item.content,
-        item_metadata=item.metadata,
+        item_metadata=item.item_metadata,
     )
     db.add(db_item)
     db.commit()

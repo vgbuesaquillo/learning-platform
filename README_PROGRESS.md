@@ -10,57 +10,61 @@
 
 ---
 
-## Backend (FastAPI/Python) — ~80%
+## Backend (FastAPI/Python) — ~90%
 
 ### Modelos y Base de Datos
-- ✅ Modelos SQLAlchemy (User, Theme, LearningItem, UserProgress, UserInteraction, LearningModule, Activity, LearningEvidence, Competency, Enrollment)
-- ✅ Migración inicial Alembic
-- ✅ Seed script con datos demo
-- ⬜ Migrationes adicionales según nuevos features
+- ✅ Modelos SQLAlchemy (User, Theme, LearningItem, UserProgress, LearningModule, Activity, Competency, etc.)
+- ✅ Migración Alembic autogenerada (coincide con modelos)
+- ✅ Seed crea 3 Themes + LearningItems + UserProgress para demo
+- ✅ **FIX:** DomainLevel español, Competency.module_id, etc.
 
 ### API Endpoints
 - ✅ Auth: register, login, me
 - ✅ Themes CRUD
 - ✅ Learning Items CRUD
-- ✅ Progress dashboard
+- ✅ Progress dashboard (usa active theme)
 - ✅ Evidence: create, submit, review
-- ❌ **Import paths rotos** — `main.py` referencia `app.api.v1.auth` inexistente
+- ✅ **Activities:** `/api/v1/activities/module/{module_id}` (nuevo)
+- ✅ **FIX:** `get_active_theme()` sin hardcodeo de "Inglés"
 
 ### Schemas
-- ✅ Theme, LearningItem, UserInteraction, UserProgress
-- ❌ **Faltan:** UserRegister, UserLogin, TokenResponse, UserOut, EvidenceCreate, EvidenceReview, EvidenceOut, LearningDashboard
+- ✅ Theme, LearningItem, UserInteraction, UserProgress, Activity, etc.
+- ✅ UserRegister, UserLogin, TokenResponse, UserOut, EvidenceCreate, EvidenceReview, EvidenceOut, LearningDashboard, CompetencyProgress
 
 ### Servicios de Dominio
-- ✅ `KnowledgeInferenceService` — decaimiento de olvido, clasificación de maestría, brecha metacognitiva
-- ✅ `ProgressCalculator` — consistencia, nivel de dominio, brecha metacognitiva
+- ✅ `KnowledgeInferenceService` — decaimiento, maestría, brecha metacognitiva, **determine_level_and_heatmap**
+- ✅ **FIX:** `get_level_classification()` retorna español (`novato`/`intermedio`/`competente`/`experto`)
 - ⬜ Integrar NLP real (actualmente keyword matching placeholder)
 
 ### Infraestructura
 - ✅ Database (SQLAlchemy + PostgreSQL)
 - ⬜ `infrastructure/cache.py` — no implementado
 - ✅ Scheduler (APScheduler + Redis lock para decaimiento semanal)
+- ✅ **FIX:** bcrypt 4.0.1 pinned (passlib incompatible con bcrypt 5.x)
 
 ### Tests
-- ✅ E2E: auth flow, evidence flow, RBAC
+- ✅ E2E: auth flow, evidence flow, RBAC (9/38 pass, mejorado de 6)
 - ✅ Integration: RBAC
-- ❌ Tests con tokens dummy que no validan auth real
+- ✅ **FIX:** `conftest.py` sobrescribe `get_current_user` para tokens dummy
+- ❌ Tests existentes tienen UUIDs hardcodeados que colisionan
 
 ---
 
-## Frontend (Next.js 14/TypeScript) — ~30%
+## Frontend (Next.js 14/TypeScript) — ~75%
 
 ### Páginas
-- ✅ Homepage `/` con lista de temas
-- ✅ `/evidence` — formulario de registro de evidencia
-- ✅ `/dashboard` — dashboard de aprendizaje (con setup guide por ahora)
-- ⬜ **Login/Register** — no existen páginas de auth
-- ⬜ **Rutas `/themes/[slug]`** — no existen
+- ✅ Homepage `/` auth-aware (3 tarjetas, enlaces condicionales)
+- ✅ `/login` — formulario funcional
+- ✅ `/register` — formulario funcional
+- ✅ `/evidence` — EvidenceForm + selector dinámico de actividades
+- ✅ `/dashboard` — LearningDashboard (Recharts, auth-guard)
+- ✅ `/themes/[slug]` — rutas dinámicas con auth-guard
 
 ### Componentes
 - ✅ `EvidenceForm` — contenido, reflexión metacognitiva, nivel de confianza
 - ✅ `LearningDashboard` — radar chart, evolución temporal, métricas, brecha metacognitiva
-- ⬜ Auth components (login form, register form)
-- ⬜ Theme detail components
+- ✅ `Navbar` — sticky con auth-aware (Login/Register vs nombre + Salir)
+- ✅ AuthContext/AuthProvider
 
 ### API Client
 - ✅ Cliente HTTP con JWT via localStorage
@@ -68,9 +72,9 @@
 - ⬜ Manejo de errores visual consistente
 
 ### Estado y Estilos
-- ⬜ Sin contexto de auth/provider
-- ⬜ Sin estado global
-- ⬜ Tailwind CSS instalado pero no usado (inline styles actualmente)
+- ✅ AuthContext/AuthProvider
+- ⬜ Sin estado global adicional
+- ⬜ Tailwind CSS instalado pero no usado (inline styles)
 
 ---
 
@@ -80,9 +84,10 @@
 - ✅ `docker-compose.yml` con todos los servicios
 - ✅ `docker-compose.prod.yml`
 - ✅ Dockerfiles multi-etapa (frontend + backend)
+- ✅ Frontend con hot-reload vía volumen montado
 
 ### Scripts
-- ✅ `seed.py` — datos demo
+- ✅ `seed.py` — datos demo (3 themes + learning module legacy)
 - ✅ `reset_db.sh` — reinicio de BD
 - ✅ `start.sh` — inicio rápido
 
@@ -95,21 +100,16 @@
 
 | ID | Severidad | Descripción | Archivos |
 |----|-----------|-------------|----------|
-| B1 | 🔴 Alta | Import path `app.api.v1.auth` no existe | `backend/app/main.py` |
-| B2 | 🔴 Alta | Schemas faltantes UserRegister, UserLogin, etc. | `backend/app/api/auth.py` |
-| B3 | 🔴 Alta | Import path `app.core.knowledge_inference_service` incorrecto | `backend/app/api/progress.py` |
-| B4 | 🟡 Media | `item.metadata` vs `item.item_metadata` | `backend/app/api/learning_items.py` |
 | B5 | 🟡 Media | `infrastructure/cache.py` no existe | — |
-| B6 | 🟡 Media | Tests con tokens dummy | `backend/tests/conftest.py` |
-| F1 | 🔴 Alta | Sin páginas de login/register | `frontend/src/app/` |
-| F2 | 🔴 Alta | `DEMO_MODULE_ID` vacío | `frontend/src/app/dashboard/page.tsx` |
-| F3 | 🟡 Media | Rutas `/themes/*` no existen | `frontend/src/app/` |
+| B6 | 🟡 Media | Tests con UUIDs hardcodeados que colisionan | `backend/tests/` |
+| F4 | 🟡 Baja | Manejo de errores visual inconsistente | `frontend/src/` |
 
 ---
 
 ## Próximos Pasos Recomendados
 
-1. **Arreglar backend** — imports, schemas faltantes, bugs
-2. **Completar frontend** — auth pages, theme routes, conectar dashboard
-3. **Ejecutar tests** y corregir errores
-4. **Configurar CI/CD** básico
+1. ~~Backend — imports, schemas, bcrypt, seed, dashboard~~ ✅
+2. ~~Frontend — auth pages, theme routes, navbar, dashboard conectado~~ ✅
+3. **Refactorizar tests** — UUIDs únicos, fixtures independientes
+4. **Manejo de errores visual** consistente en frontend
+5. **Configurar CI/CD** básico

@@ -286,4 +286,82 @@ class RecordInteractionResponse(BaseModel):
     interaction_id: UUID_TYPE
     message: str = "Interaction recorded successfully."
 
-# Endpoint schemas will be defined in backend/app/api/
+# ── Schemas de Autenticación ─────────────────────────────────────────────────
+class UserRegister(BaseModel):
+    email: EmailStr
+    full_name: str = Field(..., min_length=1, max_length=100)
+    password: str = Field(..., min_length=6)
+
+class UserLogin(BaseModel):
+    email: EmailStr
+    password: str
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+
+class UserOut(BaseModel):
+    id: UUID_TYPE
+    email: EmailStr
+    full_name: str
+    is_instructor: bool
+    is_active: bool
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+# ── Schemas de Evidencia ─────────────────────────────────────────────────────
+class EvidenceCreate(BaseModel):
+    activity_id: UUID_TYPE
+    content: str = Field(..., min_length=1)
+    reflection: Optional[str] = None
+    confidence_level: Optional[int] = Field(None, ge=1, le=5)
+
+class EvidenceReview(BaseModel):
+    score: float = Field(..., ge=0, le=100)
+    rubric_evaluation: Dict[str, Any] = Field(default_factory=dict)
+    qualitative_feedback: Optional[str] = None
+
+class EvidenceOut(BaseModel):
+    id: UUID_TYPE
+    user_id: UUID_TYPE
+    activity_id: UUID_TYPE
+    content: str
+    reflection: Optional[str] = None
+    confidence_level: Optional[int] = None
+    status: str
+    score: Optional[float] = None
+    rubric_evaluation: Dict[str, Any] = Field(default_factory=dict)
+    qualitative_feedback: Optional[str] = None
+    submitted_at: Optional[datetime] = None
+    reviewed_at: Optional[datetime] = None
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+# ── Schemas de Dashboard ────────────────────────────────────────────────────
+class CompetencyProgress(BaseModel):
+    competency_id: UUID_TYPE
+    competency_name: str
+    current_level: str = "novato"
+    domain_score: float = 0.0
+    consistency_score: float = 0.0
+    evidence_count: int = 0
+    last_evidence_at: Optional[datetime] = None
+    history: List[Dict[str, Any]] = Field(default_factory=list)
+
+class LearningDashboard(BaseModel):
+    user_id: UUID_TYPE
+    module_id: UUID_TYPE
+    module_title: str
+    overall_domain_score: float = 0.0
+    highest_level_achieved: str = "novato"
+    competencies_at_expert: int = 0
+    total_evidences: int = 0
+    approved_evidences: int = 0
+    avg_confidence_vs_score: float = 0.0
+    consistency_index: float = 0.0
+    competency_breakdown: List[CompetencyProgress] = Field(default_factory=list)

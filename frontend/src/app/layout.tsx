@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { AuthProvider } from "@/lib/auth-context";
+import Navbar from "@/components/Navbar";
 
 export const metadata: Metadata = {
   title: "LearnPath — Aprendizaje con progreso real",
@@ -14,7 +16,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         background: "#f9fafb",
         minHeight: "100vh",
       }}>
-        {children}
+        <AuthProvider>
+          <Navbar />
+          {children}
+        </AuthProvider>
       </body>
     </html>
   );

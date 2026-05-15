@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Body
 from sqlalchemy.orm import Session
-from typing import List, Optional, Dict, Any, UUID as UUID_TYPE
+from typing import List, Optional, Dict, Any
+from uuid import UUID as UUID_TYPE
 from datetime import datetime, timezone
 import asyncio
 from pydantic import BaseModel, Field, EmailStr
@@ -13,25 +14,10 @@ from app.domain.models import (
 )
 from app.domain.schemas import (
     EvidenceCreate, EvidenceReview, EvidenceOut,
-    LearningDashboard, NextLearningItemsResponse, RecordInteractionResponse, UserInteractionCreate
 )
-from app.core.knowledge_inference_service import KnowledgeInferenceService
+from app.domain.services.knowledge_inference import KnowledgeInferenceService
 
 router = APIRouter(prefix="/evidence", tags=["Evidence"])
-progress_router = APIRouter(prefix="/progress", tags=["Progress"])
-
-# --- Helper functions ---
-def get_learning_item(db: Session, item_id: UUID_TYPE) -> LearningItem:
-    db_item = db.query(LearningItem).filter(LearningItem.id == item_id).first()
-    if not db_item:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Learning item not found")
-    return db_item
-
-def get_theme(db: Session, theme_id: UUID_TYPE) -> Theme:
-    db_theme = db.query(Theme).filter(Theme.id == theme_id).first()
-    if not db_theme:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Theme not found")
-    return db_theme
 
 # --- Evidence Endpoints ---
 @router.post("/", response_model=EvidenceOut, status_code=status.HTTP_201_CREATED)
@@ -56,7 +42,7 @@ def create_evidence(
     db.add(db_evidence)
     db.commit()
     db.refresh(db_evidence)
-    return EvidenceOut(**db_evidence.dict())
+    return EvidenceOut.model_validate(db_evidence)
 
 @router.post("/{evidence_id}/submit", response_model=EvidenceOut)
 def submit_evidence(
@@ -78,7 +64,7 @@ def submit_evidence(
     evidence.submitted_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(evidence)
-    return EvidenceOut(**evidence.dict())
+    return EvidenceOut.model_validate(evidence)
 
 @router.post("/{evidence_id}/review", response_model=EvidenceOut)
 def review_evidence(
@@ -166,7 +152,7 @@ def review_evidence(
 
     db.commit()
     db.refresh(evidence)
-    return EvidenceOut(**evidence.dict())
+    return EvidenceOut.model_validate(evidence)
 
 @router.get("/my", response_model=List[EvidenceOut])
 def my_evidences(
@@ -174,19 +160,17 @@ def my_evidences(
     current_user: User = Depends(get_current_user),
 ):
     """Get all evidences submitted by the current user. Restricted to own data."""
-    return [EvidenceOut(**e.dict()) for e in db.query(LearningEvidence).filter(
+    evidences = db.query(LearningEvidence).filter(
         LearningEvidence.user_id == current_user.id
-    ).order_by(LearningEvidence.created_at.desc()).all()]
+    ).order_by(LearningEvidence.created_at.desc()).all()
+    return [EvidenceOut.model_validate(e) for e in evidences]
+
 
 @router.get("/", response_model=List[EvidenceOut])
 def get_all_evidences(
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_instructor), # Requires instructor role for global access
+    current_user: User = Depends(require_instructor),
 ):
     """Get all evidences (instructors only)."""
-    return [EvidenceOut(**e.dict()) for e in db.query(LearningEvidence)
-            .order_by(LearningEvidence.created_at.desc()).all()]
-
-# --- Progress Endpoints ---
-# These are defined in progress.py and included in main.py
-# Example: api_router.include_router(progress_router)
+    evidences = db.query(LearningEvidence).order_by(LearningEvidence.created_at.desc()).all()
+    return [EvidenceOut.model_validate(e) for e in evidences]

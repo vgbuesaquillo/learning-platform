@@ -3,6 +3,8 @@ from app.domain.models import UserProgress, LearningItem
 from app.core.config import settings
 from datetime import datetime, timezone, timedelta
 from typing import List, Dict, Any, Optional
+from uuid import UUID, uuid4
+from collections import defaultdict
 import structlog
 
 logger = structlog.get_logger()
@@ -77,15 +79,15 @@ class KnowledgeInferenceService:
 
 
     def get_level_classification(self, mastery_level: float) -> str:
-        """Classifies mastery level into categories (e.g., Novice, Intermediate)."""
+        """Classifies mastery level into DomainLevel-compatible categories."""
         if mastery_level < 0.4:
-            return "Novice"
+            return "novato"
         elif mastery_level < 0.65:
-            return "Intermediate"
+            return "intermedio"
         elif mastery_level < 0.85:
-            return "Competent"
+            return "competente"
         else:
-            return "Expert"
+            return "experto"
 
     def calculate_consistency_score(self, record: UserProgress) -> float:
         """Calculates consistency based on the history of interactions."""
@@ -201,3 +203,82 @@ class KnowledgeInferenceService:
         record.history.append(history_entry)
 
         logger.debug("updated_mastery_from_interaction", record_id=str(record.id), mastery=record.mastery_level, recurrence=record.recurrence_score, type=interaction_type)
+
+    def determine_level_and_heatmap(self, items_with_progress: List[Dict], theme_name: str) -> Dict[str, Any]:
+        if not items_with_progress:
+            return {
+                "overall_theme_mastery_score": 0.0,
+                "highest_level_achieved": "N/A",
+                "competencies_at_expert": 0,
+                "avg_confidence_vs_score": 0.0,
+                "consistency_index": 0.0,
+                "heatmap": [],
+            }
+
+        groups = defaultdict(list)
+        for entry in items_with_progress:
+            item = entry["item"]
+            progress = entry["progress"]
+            groups[item.item_type].append(progress)
+
+        total_mastery = sum(entry["progress"].mastery_level for entry in items_with_progress)
+        overall = (total_mastery / len(items_with_progress)) * 100 if items_with_progress else 0
+
+        heatmap = []
+        max_level_score = 0
+        for group_name, progress_records in groups.items():
+            avg_mastery = sum(p.mastery_level for p in progress_records) / len(progress_records) * 100
+            level = self.get_level_classification(avg_mastery / 100)
+            consistency = self.calculate_consistency_score(progress_records[0])
+            evidence_count = sum(1 for p in progress_records if p.history and len(p.history) > 0)
+            last_evidence = max((p.last_practiced_at for p in progress_records if p.last_practiced_at), default=None)
+
+            history = []
+            for p in progress_records:
+                if p.history:
+                    for h in p.history[-10:]:
+                        if not isinstance(h, dict):
+                            continue
+                        mastery_before = h.get("mastery_level_before", 0)
+                        ts = h.get("timestamp")
+                        if isinstance(ts, str):
+                            date_str = ts
+                        elif isinstance(ts, datetime):
+                            date_str = ts.isoformat()
+                        else:
+                            date_str = datetime.now(timezone.utc).isoformat()
+                        history.append({
+                            "date": date_str,
+                            "score": mastery_before * 100,
+                            "domain_score": p.mastery_level * 100,
+                            "level": self.get_level_classification(p.mastery_level),
+                        })
+                    break
+
+            level_scores = {"novato": 1, "intermedio": 2, "competente": 3, "experto": 4}
+            level_score = level_scores.get(level, 0)
+            max_level_score = max(max_level_score, level_score)
+
+            heatmap.append({
+                "competency_id": str(uuid4()),
+                "competency_name": group_name.replace("_", " ").title(),
+                "current_level": level,
+                "domain_score": round(avg_mastery, 1),
+                "consistency_score": round(consistency, 1),
+                "evidence_count": evidence_count,
+                "last_evidence_at": last_evidence.isoformat() if last_evidence else None,
+                "history": history,
+            })
+
+        level_names = {4: "experto", 3: "competente", 2: "intermedio", 1: "novato", 0: "N/A"}
+        highest_level = level_names.get(max_level_score, "N/A")
+        competencies_at_expert = sum(1 for h in heatmap if h["current_level"] == "experto")
+
+        return {
+            "overall_theme_mastery_score": round(overall, 1),
+            "highest_level_achieved": highest_level,
+            "competencies_at_expert": competencies_at_expert,
+            "avg_confidence_vs_score": 0.0,
+            "consistency_index": round(min(overall, 100.0), 1),
+            "heatmap": heatmap,
+        }

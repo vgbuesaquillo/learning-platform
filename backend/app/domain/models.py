@@ -16,15 +16,18 @@ def now_utc():
 
 # --- Enums ---
 class DomainLevel(enum.Enum):
-    NOVICE = "Novice"
-    INTERMEDIATE = "Intermediate"
-    COMPETENT = "Competent"
-    EXPERT = "Expert"
+    NOVATO = "novato"
+    INTERMEDIO = "intermedio"
+    COMPETENTE = "competente"
+    EXPERTO = "experto"
 
 class EvidenceType(enum.Enum):
     ACTIVIDAD = "activity"
     PROYECTO = "project"
     INFORME = "report"
+    AUTOEVALUACION = "autoevaluacion"
+    REFLEXION = "reflexion"
+    PORTFOLIO = "portfolio"
 
 class EvidenceStatus(str, enum.Enum):
     BORRADOR = "draft"
@@ -206,6 +209,7 @@ class ActivityCompetency(Base): # Many-to-many between Activity and Competency
 
     activity_id = Column(UUID(as_uuid=True), ForeignKey("activities.id"), primary_key=True)
     competency_id = Column(UUID(as_uuid=True), ForeignKey("competencies.id"), primary_key=True)
+    contribution_weight = Column(Float, default=1.0)
 
     # Relaciones
     activity = relationship("Activity", back_populates="activity_competencies")
@@ -215,6 +219,7 @@ class Competency(Base): # Competencies to be mapped to skills/knowledge areas
     __tablename__ = "competencies"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    module_id = Column(UUID(as_uuid=True), ForeignKey("learning_modules.id"), nullable=False, index=True)
     name = Column(String(100), unique=True, nullable=False, index=True)
     description = Column(Text)
     level_indicators = Column(JSON, default=dict) # e.g., {"expert": "Can apply concepts in novel situations"}
