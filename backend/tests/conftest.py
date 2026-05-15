@@ -1,11 +1,23 @@
 import os
 import sys
+import uuid as uuid_lib
 from uuid import UUID
+from datetime import datetime, timezone
 
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+
+# Python 3.13+ compatibility: sqlalchemy.dialects.postgresql.UUID + SQLite
+# passes an integer as 'hex' to uuid.UUID(), which Python 3.13 rejects.
+_original_uuid_init = uuid_lib.UUID.__init__
+def _patched_uuid_init(self, hex=None, **kwargs):
+    if hex is not None and not isinstance(hex, (str, bytes, bytearray)):
+        _original_uuid_init(self, int=hex, **kwargs)
+    else:
+        _original_uuid_init(self, hex=hex, **kwargs)
+uuid_lib.UUID.__init__ = _patched_uuid_init
 
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if BASE_DIR not in sys.path:
@@ -33,6 +45,7 @@ app.dependency_overrides[original_get_db] = override_get_db
 
 _STUDENT_UUID = UUID("00000000-0000-0000-0000-000000000001")
 _INSTRUCTOR_UUID = UUID("00000000-0000-0000-0000-000000000002")
+_NOW = datetime.now(timezone.utc)
 
 @pytest.fixture(scope="session", autouse=True)
 def setup_users():
@@ -64,6 +77,7 @@ def _make_mock_user(uid, email, name, is_instructor):
         "full_name": name,
         "is_instructor": is_instructor,
         "is_active": True,
+        "created_at": _NOW,
     })()
 
 @pytest.fixture(autouse=True)
@@ -73,6 +87,13 @@ def _override_auth():
     yield
     app.dependency_overrides.pop(get_current_user, None)
     app.dependency_overrides.pop(require_instructor, None)
+
+@pytest.fixture
+def disable_auth():
+    app.dependency_overrides.pop(get_current_user, None)
+    yield
+    student = _make_mock_user(_STUDENT_UUID, "student@test.com", "Test Student", False)
+    app.dependency_overrides[get_current_user] = lambda: student
 
 @pytest.fixture
 def student_token():
