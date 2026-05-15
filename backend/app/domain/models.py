@@ -63,13 +63,16 @@ class LearningItem(Base):
     theme_id = Column(UUID(as_uuid=True), ForeignKey("themes.id"), nullable=False, index=True)
     item_type = Column(String(50), nullable=False)  # e.g., "vocabulary", "phrase", "idiom", "grammar_rule"
     content = Column(Text, nullable=False)          # The actual vocabulary word, phrase, etc.
-    metadata = Column(JSON, default=dict)
+    item_metadata = Column(JSON, default=dict)
     created_at = Column(DateTime(timezone=True), default=now_utc)
 
     # Relaciones
     theme = relationship("Theme", back_populates="learning_items")
     user_progress = relationship("UserProgress", back_populates="learning_item")
     user_interactions = relationship("UserInteraction", back_populates="learning_item")
+
+    # Note: avoid defining a property named 'metadata' to prevent conflicts with SQLAlchemy internals.
+
 
 # ── Interacciones del Estudiante ─────────────────────────────────────────────
 class UserInteraction(Base):

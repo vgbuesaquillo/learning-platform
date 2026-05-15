@@ -48,7 +48,7 @@ class LearningItemBase(BaseModel):
     theme_id: UUID_TYPE
     item_type: str = Field(..., min_length=1, max_length=50) # e.g., "vocabulary", "phrase", "idiom"
     content: str = Field(..., min_length=1)
-    metadata: Dict[str, Any] = Field(default_factory=dict)
+    item_metadata: Dict[str, Any] = Field(default_factory=dict)
 
 class LearningItemCreate(LearningItemBase):
     pass

@@ -13,6 +13,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # ── Etapa development (con hot-reload) ──────────────────────
 FROM base AS development
 
+ENV PYTHONPATH=/app
+
 # En dev el código se monta como volumen (docker-compose.yml)
 # Uvicorn con --reload detecta cambios en /app
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload", "--log-level", "info"]
@@ -21,5 +23,8 @@ CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload
 FROM base AS production
 
 COPY . .
+
+# Ensure the backend directory is in PYTHONPATH so Python can find the 'app' module
+ENV PYTHONPATH=/app
 
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]

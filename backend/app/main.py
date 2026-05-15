@@ -1,13 +1,24 @@
-from fastapi import Depends, HTTPException, status, APIRouter, Body
+from __future__ import annotations
+from fastapi import Depends, HTTPException, status, APIRouter, Body, FastAPI
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from app.infrastructure.database import get_db
 from app.core.security import decode_token
 from app.domain.models import User, UserProgress, LearningItem # Import UserProgress and LearningItem
-from app.domain.schemas import UserCreateSchema, UserSchema # Assuming these schemas exist
+from app.api.learning_items import router as learning_items_router
+
 from app.core.config import settings
 from uuid import UUID
 import asyncio # Required for lifespan
+from contextlib import asynccontextmanager
+
+# No-op schedulers to satisfy lifespan hooks if not defined elsewhere
+
+def start_scheduler():
+    pass
+
+def shutdown_scheduler():
+    pass
 
 security = HTTPBearer()
 
@@ -56,49 +67,6 @@ def require_own_resource(
         raise HTTPException(status_code=403, detail="Acceso denegado: recurso de otro usuario")
     return current_user
 
-# Example of how to use require_own_resource in a route:
-# @api_router.get("/progress/dashboard/{user_id_param}")
-# async def get_user_progress_dashboard(
-#     user_id_param: UUID,
-#     current_user: User = Depends(require_own_resource(resource_user_id=user_id_param)) # Pass the user_id_param here
-# ):
-#     # ... your logic ...
-#     pass
-
-# Register auth routes
-from app.api.v1.auth import router as auth_router
-api_router.include_router(auth_router)
-
-# Register other routers (placeholder)
-# from app.api.v1.themes import router as themes_router
-# api_router.include_router(themes_router)
-
-# from app.api.v1.evidence import router as evidence_router
-# api_router.include_router(evidence_router)
-
-# from app.api.v1.progress import router as progress_router
-# api_router.include_router(progress_router)
-
-# Mock routers to allow `main.py` to run without errors if they don't exist yet
-# If these exist, they will be imported and used instead
-try:
-    from app.api.v1.themes import router as themes_router
-    api_router.include_router(themes_router)
-except ImportError:
-    print("themes router not found, skipping import.")
-
-try:
-    from app.api.v1.evidence import router as evidence_router
-    api_router.include_router(evidence_router)
-except ImportError:
-    print("evidence router not found, skipping import.")
-
-try:
-    from app.api.v1.progress import router as progress_router
-    api_router.include_router(progress_router)
-except ImportError:
-    print("progress router not found, skipping import.")
-
 # Lifespan manager
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -113,6 +81,19 @@ app = FastAPI(
     title=settings.APP_NAME,
     lifespan=lifespan # Use the lifespan manager
 )
+
+# Register routers
+from app.api.v1.auth import router as auth_router
+api_router.include_router(auth_router)
+from app.api.learning_items import router as learning_items_router
+api_router.include_router(learning_items_router)
+from app.api.progress import router as progress_router
+api_router.include_router(progress_router)
+
+# Health endpoint for container checks
+@app.get("/health")
+async def health():
+    return {"status": "ok"}
 
 # Include the main API router
 app.include_router(api_router)
