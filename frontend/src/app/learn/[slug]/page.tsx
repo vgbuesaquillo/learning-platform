@@ -20,6 +20,26 @@ interface LearnPageProps {
   params: { slug: string };
 }
 
+const i18n = (slug: string) => {
+  const isEn = slug === "english";
+  return {
+    notFoundTitle: isEn ? "Topic not found" : "Eje no encontrado",
+    notFoundBack: isEn ? "Back to home" : "Volver al inicio",
+    loading: isEn ? "Loading content..." : "Cargando contenido...",
+    doneTitle: isEn ? "You completed all items!" : "¡Completaste todos los ítems!",
+    doneDesc: isEn ? "Keep practicing to reach expert level." : "Seguí practicando para alcanzar el nivel experto.",
+    backHome: isEn ? "Back to home" : "Volver al inicio",
+    reviewAgain: isEn ? "Review again" : "Repasar de nuevo",
+    emptyTitle: isEn ? "No content available" : "Sin contenido disponible",
+    difficulty: isEn ? "difficulty" : "dificultad",
+    knowIt: isEn ? "\u2713 I know it" : "\u2713 Lo sé",
+    dontKnow: isEn ? "\u2717 I don\u2019t know" : "\u2717 No lo sé",
+    saving: isEn ? "Saving..." : "Guardando...",
+    finish: isEn ? "\u2713 Finish" : "\u2713 Finalizar",
+    backTo: isEn ? "Back to" : "Volver a",
+  };
+};
+
 export default function LearnPage({ params }: LearnPageProps) {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
@@ -31,6 +51,7 @@ export default function LearnPage({ params }: LearnPageProps) {
   const [done, setDone] = useState(false);
 
   const themeName = SLUG_TO_NAME[params.slug];
+  const txt = i18n(params.slug);
 
   useEffect(() => {
     if (!authLoading && !user) router.push("/login");
@@ -52,12 +73,12 @@ export default function LearnPage({ params }: LearnPageProps) {
     }).catch(() => setLoading(false));
   }, [user, themeName]);
 
-  const handleAdvance = useCallback(async () => {
+  const handleAdvance = useCallback(async (weight: number) => {
     const item = items[currentIdx];
     if (!item || saving) return;
     setSaving(true);
     try {
-      await itemsApi.view(item.id);
+      await itemsApi.view(item.id, { weight });
     } catch { /* ignore */ }
     setSaving(false);
     if (currentIdx + 1 < items.length) {
@@ -72,8 +93,8 @@ export default function LearnPage({ params }: LearnPageProps) {
   if (!themeName) {
     return (
       <div style={container}>
-        <h1 style={{ fontSize: "1.25rem" }}>Eje no encontrado</h1>
-        <Link href="/" style={{ color: "#1d4ed8" }}>Volver al inicio</Link>
+        <h1 style={{ fontSize: "1.25rem" }}>{txt.notFoundTitle}</h1>
+        <Link href="/" style={{ color: "#1d4ed8" }}>{txt.notFoundBack}</Link>
       </div>
     );
   }
@@ -81,7 +102,7 @@ export default function LearnPage({ params }: LearnPageProps) {
   if (loading) {
     return (
       <div style={container}>
-        <p style={{ color: "#9ca3af" }}>Cargando contenido...</p>
+        <p style={{ color: "#9ca3af" }}>{txt.loading}</p>
       </div>
     );
   }
@@ -91,15 +112,15 @@ export default function LearnPage({ params }: LearnPageProps) {
       <div style={container}>
         <div style={card}>
           <h2 style={{ fontSize: "1.25rem", fontWeight: 700, color: "#22c55e", marginBottom: 8 }}>
-            ¡Completaste todos los ítems!
+            {txt.doneTitle}
           </h2>
           <p style={{ color: "#6b7280", marginBottom: "1rem" }}>
-            Seguí practicando para alcanzar el nivel experto.
+            {txt.doneDesc}
           </p>
           <div style={{ display: "flex", gap: 8 }}>
-            <Link href="/" style={btnPrimary}>Volver al inicio</Link>
+            <Link href="/" style={btnPrimary}>{txt.backHome}</Link>
             <button onClick={() => { setCurrentIdx(0); setDone(false); }} style={btnSecondary}>
-              Repasar de nuevo
+              {txt.reviewAgain}
             </button>
           </div>
         </div>
@@ -110,8 +131,8 @@ export default function LearnPage({ params }: LearnPageProps) {
   if (!theme || items.length === 0) {
     return (
       <div style={container}>
-        <h1 style={{ fontSize: "1.25rem" }}>Sin contenido disponible</h1>
-        <Link href="/" style={{ color: "#1d4ed8" }}>Volver al inicio</Link>
+        <h1 style={{ fontSize: "1.25rem" }}>{txt.emptyTitle}</h1>
+        <Link href="/" style={{ color: "#1d4ed8" }}>{txt.backHome}</Link>
       </div>
     );
   }
@@ -119,12 +140,13 @@ export default function LearnPage({ params }: LearnPageProps) {
   const item = items[currentIdx];
   const category = item.item_metadata?.category || "";
   const difficulty = item.item_metadata?.difficulty || 1;
+  const isLast = currentIdx + 1 >= items.length;
 
   return (
     <div style={container}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
         <Link href="/" style={{ color: "#6b7280", fontSize: "0.875rem", textDecoration: "none" }}>
-          &larr; {theme.name}
+          &larr; {txt.backTo} {theme.name}
         </Link>
         <span style={{ fontSize: "0.75rem", color: "#9ca3af" }}>
           {currentIdx + 1} / {items.length}
@@ -159,20 +181,34 @@ export default function LearnPage({ params }: LearnPageProps) {
 
         <p style={{ fontSize: "0.875rem", color: "#6b7280" }}>
           {item.item_type.replace("_", " ")}
-          {difficulty > 1 && ` · dificultad ${difficulty}`}
+          {difficulty > 1 && ` · ${txt.difficulty} ${difficulty}`}
         </p>
       </div>
 
-      <button
-        onClick={handleAdvance}
-        disabled={saving}
-        style={{
-          ...btnPrimary, width: "100%", marginTop: "1rem", textAlign: "center",
-          opacity: saving ? 0.6 : 1,
-        }}
-      >
-        {saving ? "Guardando..." : currentIdx + 1 < items.length ? "✓ Lo sé" : "✓ Finalizar"}
-      </button>
+      <div style={{ display: "flex", gap: 8, marginTop: "1rem" }}>
+        {!isLast && (
+          <button
+            onClick={() => handleAdvance(0.1)}
+            disabled={saving}
+            style={{
+              ...btnSecondary, flex: 1, textAlign: "center",
+              opacity: saving ? 0.6 : 1,
+            }}
+          >
+            {saving ? txt.saving : txt.dontKnow}
+          </button>
+        )}
+        <button
+          onClick={() => handleAdvance(isLast ? 0.5 : 0.5)}
+          disabled={saving}
+          style={{
+            ...(isLast ? btnPrimary : btnPrimary), flex: 1, textAlign: "center",
+            opacity: saving ? 0.6 : 1,
+          }}
+        >
+          {saving ? txt.saving : isLast ? txt.finish : txt.knowIt}
+        </button>
+      </div>
     </div>
   );
 }
