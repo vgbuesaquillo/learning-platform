@@ -30,17 +30,19 @@ docker compose up -d --build <service> # rebuild + start
 
 ## Estado actual
 
-### Backend (~90%)
+### Backend (~92%)
 - [x] Modelos SQLAlchemy (User, Theme, LearningItem, LearningModule, UserProgress, etc.)
 - [x] Schemas Pydantic (auth, evidence, progress, themes, activities)
 - [x] CRUDs: auth, themes, learning_items, progress, evidence, **activities**
-- [x] KnowledgeInferenceService (decaimiento, maestría, brecha metacognitiva, **determine_level_and_heatmap**)
+- [x] KnowledgeInferenceService (decaimiento, maestría, brecha metacognitiva, **determine_level_and_heatmap**, weight=0 sin ganancia)
 - [x] Scheduler APScheduler + Redis lock
 - [x] Migración Alembic autogenerada (coincide con modelos)
 - [x] Seed script: crea users, **4 Themes + LearningItems + UserProgress** + LearningModule legacy
 - [x] Tests E2E e integración (38/38 pass)
-- [x] **Nuevo endpoint** `POST /api/v1/learning-items/{id}/view`: auto-registra vista + mastery
+- [x] **Nuevo endpoint** `POST /api/v1/learning-items/{id}/view`: auto-registra vista + mastery, acepta weight
 - [x] **Nuevo endpoint** `GET /api/v1/progress/themes`: progreso multi-tema para homepage
+- [x] **CORS middleware** agregado en `main.py` (faltaba)
+- [x] **FIX:** `update_mastery_from_interaction` acepta weight=0 (sin ganancia de mastery)
 - [x] **FIX:** `passlib` + `bcrypt 5.0.0` → pinned `bcrypt==4.0.1`
 - [x] **FIX:** Seed ahora crea `Theme` + `LearningItem` + `UserProgress` (faltaban)
 - [x] **FIX:** `get_active_theme()` ya no hardcodea "Inglés"
@@ -49,14 +51,14 @@ docker compose up -d --build <service> # rebuild + start
 - [x] **FIX:** `conftest.py` sobrescribe `get_current_user` para tests con tokens dummy
 - [ ] `infrastructure/cache.py` no existe
 
-### Frontend (~85%)
+### Frontend (~88%)
 - [x] Layout raíz + metadata + AuthProvider + Navbar sticky
 - [x] Homepage auth-aware con progreso real (4 tarjetas con barra, nivel, items)
 - [x] Página `/login` con formulario funcional
 - [x] Página `/register` con formulario funcional
 - [x] Página `/evidence` con EvidenceForm (visible solo instructores)
-- [x] Página `/dashboard` con LearningDashboard (Recharts, auth-guard)
-- [x] **Nueva página** `/learn/[slug]` con flujo secuencial de aprendizaje
+- [x] Página `/dashboard` con LearningDashboard (Recharts, auth-guard). Fix: maneja nivel "N/A" sin crash.
+- [x] **Nueva página** `/learn/[slug]` con flujo secuencial, i18n (inglés/español según curso), botón "I don't know" (weight=0)
 - [x] Cliente API (`api.ts`) con JWT + tipado completo
 - [x] AuthContext/AuthProvider (`auth-context.tsx`)
 - [x] Navbar auth-aware con links condicionales (Evidencia solo si instructor)
@@ -64,11 +66,12 @@ docker compose up -d --build <service> # rebuild + start
 - [ ] Tailwind CSS instalado pero no usado (inline styles)
 - [ ] Sin manejo de errores visual consistente
 
-### DevOps (~50%)
-- [x] docker-compose.yml
+### DevOps (~55%)
+- [x] docker-compose.yml (Redis puerto host 6380, Frontend 3001, CORS hardcodeado)
 - [x] docker-compose.prod.yml
 - [x] Scripts: seed.py, reset_db.sh, start.sh
 - [x] .env.example
+- [x] **Devcontainer reparado**: Python 3.12, Docker CLI, socket montado, sin db/redis duplicados
 - [ ] Sin CI/CD
 
 ## Decisiones de arquitectura
@@ -81,11 +84,13 @@ docker compose up -d --build <service> # rebuild + start
 - Frontend API_BASE: `http://localhost:9000`
 - **Dos subsistemas paralelos**: `Theme→LearningItem→UserProgress` (nuevo, dashboard) y `LearningModule→Activity→Competency→LearningEvidence` (legacy, evidence)
 - CSS-in-JS inline (no Tailwind) por preferencia del usuario
+- **Devcontainer**: imagen `ubuntu-24.04`, Python 3.12, Node 20, Docker CLI con socket montado. Sin db/redis propios (usa los del root compose).
+- **Puertos**: Frontend → host `3001`, Backend → `9000`, Redis → host `6380`, Adminer → `9090`
 
 ## Datos de seed
 - `demo@learnpath.dev` / `demo1234` (estudiante)
 - `instructor@learnpath.dev` / `demo1234` (instructor)
-- 3 Themes: Inglés comunicativo, Metodología de investigación, Programación
+- 4 Themes: Inglés comunicativo, Metodología de investigación, Programación, Deportes y salud
 - Module ID (learning module): `356c96e0-fcd3-4e84-b191-eecd333231d6`
 - Cada theme tiene LearningItems + UserProgress para demo
 
@@ -98,6 +103,26 @@ docker compose up -d --build <service> # rebuild + start
 6. ~~Rediseñar flujo de auto-aprendizaje (login → ejes → contenido progresivo)~~ ✅
 7. Agregar manejo de errores visual consistente en frontend
 8. Configurar CI/CD básico
+
+## Cambios recientes (17-May-2026)
+### Devcontainer
+- **Fix Python 3.11→3.12**: Ubuntu 24.04 no tiene python3.11, cambiado a 3.12.
+- **Docker CLI + socket**: instalado `get.docker.com`, montado `/var/run/docker.sock`, `chmod 666` en setup.sh.
+- **Eliminados db/redis duplicados**: ahora solo usa los del root compose, sin conflicto de puertos.
+- **Eliminados port bindings del devcontainer**: ya no compite por 3000/8000.
+
+### Infra
+- **Puertos cambiados**: Redis → `6380`, Frontend → `3001` (evita conflictos en Codespaces y local).
+- **CORS hardcodeado** en docker-compose.yml (incluye 3000, 3001, 127.0.0.1).
+- **CORS middleware** agregado en `main.py` (no estaba, las requests cross-origin fallaban).
+
+### Backend
+- **FIX:** `update_mastery_from_interaction` acepta `weight=0` (sin ganancia de mastery). Antes weight=0 caía al default (1.0).
+
+### Frontend
+- **Dashboard** fix: maneja nivel "N/A" sin crash (LEVEL_CONFIG fallback).
+- **Learn page**: i18n por slug (inglés/español). Curso de inglés UI en inglés.
+- **Botón "I don't know"**: avanza sin ganancia de mastery (weight=0).
 
 ## Cambios recientes (15-May-2026)
 ### Backend
