@@ -51,7 +51,7 @@ services:
       SECRET_KEY: ${SECRET_KEY}
       ALGORITHM: ${ALGORITHM}
       ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES}
-      BACKEND_CORS_ORIGINS: ${BACKEND_CORS_ORIGINS}
+      BACKEND_CORS_ORIGINS: '["http://localhost:3000","http://localhost:3001","http://127.0.0.1:3000","http://127.0.0.1:3001"]'
       ENVIRONMENT: ${ENVIRONMENT}
     volumes:
       - ./backend:/app          # Hot-reload: montar código fuente
