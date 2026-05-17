@@ -87,7 +87,7 @@ services:
       - /app/node_modules          # Excluir node_modules del volumen
       - /app/.next                 # Excluir .next del volumen
     ports:
-      - "3000:3000"
+      - "3001:3000"
     depends_on:
       - backend
     networks:
