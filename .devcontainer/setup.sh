@@ -12,6 +12,11 @@ cd frontend && npm install && cd ..
 echo "--- Ejecutando migraciones ---"
 cd backend && alembic upgrade head && cd ..
 
+echo "--- Asegurando acceso a Docker ---"
+# El socket de Docker del host tiene un GID distinto al del contenedor
+# Solución: hacer el socket accesible para todos (devcontainer, no producción)
+sudo chmod 666 /var/run/docker.sock
+
 echo "--- Sembrando base de datos ---"
 python backend/scripts/seed.py
 
