@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
     # CORS — acepta JSON array string o lista Python
-    BACKEND_CORS_ORIGINS: str = '["http://localhost:3000"]'
+    BACKEND_CORS_ORIGINS: str = '["http://localhost:3000","http://localhost:3001","http://127.0.0.1:3000","http://127.0.0.1:3001","http://frontend:3000"]'
 
     @property
     def cors_origins(self) -> List[str]:

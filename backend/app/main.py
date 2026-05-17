@@ -1,6 +1,7 @@
 from __future__ import annotations
 from fastapi import Depends, HTTPException, status, APIRouter, Body, FastAPI
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from app.infrastructure.database import get_db
 from app.core.security import decode_token
@@ -16,6 +17,15 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title=settings.APP_NAME,
     lifespan=lifespan
+)
+
+# CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 api_router = APIRouter(prefix="/api/v1")
