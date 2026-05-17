@@ -172,7 +172,7 @@ class KnowledgeInferenceService:
             "seen_in_context": 1.0,
         }
 
-        actual_weight = weight if weight > 0 else interaction_weights.get(interaction_type, 1.0)
+        actual_weight = weight if weight >= 0 else interaction_weights.get(interaction_type, 1.0)
 
         if actual_weight > MAX_USAGE_WEIGHTING:
             actual_weight = MAX_USAGE_WEIGHTING

@@ -188,7 +188,7 @@ export default function LearnPage({ params }: LearnPageProps) {
       <div style={{ display: "flex", gap: 8, marginTop: "1rem" }}>
         {!isLast && (
           <button
-            onClick={() => handleAdvance(0.1)}
+            onClick={() => handleAdvance(0)}
             disabled={saving}
             style={{
               ...btnSecondary, flex: 1, textAlign: "center",
