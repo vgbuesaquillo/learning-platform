@@ -37,7 +37,7 @@ export default function LearningDashboard({ moduleId }: Props) {
   if (error) return <ErrorMessage message={error} />;
   if (!data) return null;
 
-  const level = LEVEL_CONFIG[data.highest_level_achieved];
+  const level = LEVEL_CONFIG[data.highest_level_achieved] || { label: data.highest_level_achieved, color: "#6b7280", bg: "#f3f4f6" };
 
   // Datos para radar de competencias
   const radarData = data.competency_breakdown.map((cp) => ({
@@ -169,7 +169,7 @@ export default function LearningDashboard({ moduleId }: Props) {
           Detalle por competencia
         </h3>
         {data.competency_breakdown.map((cp) => {
-          const lvl = LEVEL_CONFIG[cp.current_level];
+          const lvl = LEVEL_CONFIG[cp.current_level] || { label: cp.current_level, color: "#6b7280", bg: "#f3f4f6" };
           return (
             <div key={cp.competency_id} style={{ marginBottom: "1rem", paddingBottom: "1rem", borderBottom: "1px solid #f3f4f6" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
