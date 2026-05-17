@@ -7,6 +7,7 @@ services:
       dockerfile: Dockerfile
     volumes:
       - ..:/workspace:cached
+      - /var/run/docker.sock:/var/run/docker.sock
     environment:
       DATABASE_URL: postgresql://postgres:postgres@db:5432/learning
       REDIS_URL: redis://redis:6379/0

@@ -10,6 +10,10 @@ RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get install -y nodejs \
     && rm -rf /var/lib/apt/lists/*
 
+# Docker CLI (para usar docker compose desde el devcontainer)
+RUN curl -fsSL https://get.docker.com | bash - \
+    && rm -rf /var/lib/apt/lists/*
+
 # Convenience symlinks
 RUN ln -sf /usr/bin/python3.12 /usr/local/bin/python3 && \
     ln -sf /usr/bin/python3.12 /usr/local/bin/python && \
