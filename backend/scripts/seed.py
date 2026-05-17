@@ -45,6 +45,7 @@ def seed():
             {"name": "Inglés comunicativo", "description": "Vocabulario, gramática y frases para comunicación diaria en inglés.", "order": 1},
             {"name": "Metodología de investigación", "description": "Diseño, ejecución y comunicación de investigación científica.", "order": 2},
             {"name": "Programación", "description": "Fundamentos de lógica, estructuras de datos y algoritmos.", "order": 3},
+            {"name": "Deportes y salud", "description": "Nutrición, entrenamiento, anatomía básica y hábitos saludables.", "order": 4},
         ]
         themes_created = 0
         for td in themes_data:
@@ -185,6 +186,15 @@ def _items_for_theme(theme_name: str) -> list:
             {"item_type": "concept", "content": "Estructuras de datos: listas, dicts, sets", "item_metadata": {"difficulty": 2, "category": "data_structures"}},
             {"item_type": "method", "content": "Recursión", "item_metadata": {"difficulty": 3, "category": "algorithms"}},
             {"item_type": "method", "content": "Algoritmos de búsqueda y ordenamiento", "item_metadata": {"difficulty": 3, "category": "algorithms"}},
+        ],
+        "Deportes y salud": [
+            {"item_type": "concept", "content": "Macronutrientes: proteínas, carbohidratos, grasas", "item_metadata": {"difficulty": 1, "category": "nutrition"}},
+            {"item_type": "concept", "content": "Principios del entrenamiento: sobrecarga progresiva", "item_metadata": {"difficulty": 1, "category": "training"}},
+            {"item_type": "concept", "content": "Anatomía básica: grupos musculares principales", "item_metadata": {"difficulty": 2, "category": "anatomy"}},
+            {"item_type": "concept", "content": "Frecuencia cardíaca y zonas de esfuerzo", "item_metadata": {"difficulty": 2, "category": "physiology"}},
+            {"item_type": "method", "content": "Rutina full body vs split", "item_metadata": {"difficulty": 2, "category": "training"}},
+            {"item_type": "principle", "content": "Hidratación y electrolitos durante el ejercicio", "item_metadata": {"difficulty": 2, "category": "nutrition"}},
+            {"item_type": "method", "content": "Planificación de semana deportiva: descanso activo", "item_metadata": {"difficulty": 3, "category": "planning"}},
         ],
     }
     return items_map.get(theme_name, [])

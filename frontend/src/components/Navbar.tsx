@@ -11,10 +11,12 @@ export default function Navbar() {
       <div style={inner}>
         <Link href="/" style={logo}>LearnPath</Link>
         <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-          <Link href="/evidence" style={link}>Evidencia</Link>
           <Link href="/dashboard" style={link}>Dashboard</Link>
           {loading ? null : user ? (
             <>
+              {user.is_instructor && (
+                <Link href="/evidence" style={link}>Evidencias</Link>
+              )}
               <span style={{ fontSize: "0.8rem", color: "#6b7280" }}>
                 {user.full_name}
               </span>

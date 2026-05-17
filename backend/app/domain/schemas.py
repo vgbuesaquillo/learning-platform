@@ -284,7 +284,22 @@ class NextLearningItemsResponse(BaseModel):
 # Schema for API to record user interactions
 class RecordInteractionResponse(BaseModel):
     interaction_id: UUID_TYPE
+    mastery_level: float = 0.0
+    level: str = "novato"
     message: str = "Interaction recorded successfully."
+
+# Schema for theme progress summary (used in homepage)
+class ThemeProgressSummary(BaseModel):
+    theme_id: UUID_TYPE
+    theme_name: str
+    theme_order: int
+    total_items: int
+    completed_items: int
+    overall_mastery: float
+    level: str = "novato"
+
+class ThemesProgressResponse(BaseModel):
+    themes: List[ThemeProgressSummary]
 
 # ── Schemas de Autenticación ─────────────────────────────────────────────────
 class UserRegister(BaseModel):

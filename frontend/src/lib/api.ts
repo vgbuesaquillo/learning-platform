@@ -76,6 +76,22 @@ export const evidenceApi = {
 export const progressApi = {
   dashboard: (moduleId: string) =>
     request<LearningDashboard>(`/progress/dashboard/${moduleId}`),
+  themesProgress: () =>
+    request<ThemesProgressResponse>("/progress/themes"),
+};
+
+// ── Themes ──────────────────────────────────────────────────────────────────
+
+export const themesApi = {
+  list: () => request<Theme_[]>("/themes"),
+};
+
+// ── Items ───────────────────────────────────────────────────────────────────
+
+export const itemsApi = {
+  list: () => request<LearningItem_[]>("/learning-items"),
+  view: (itemId: string, body?: Record<string, unknown>) =>
+    request<ViewItemResponse>(`/learning-items/${itemId}/view`, { method: "POST", body: JSON.stringify(body || {}) }),
 };
 
 // ── Tipos TypeScript ────────────────────────────────────────────────────────
@@ -127,4 +143,43 @@ export interface LearningDashboard {
   avg_confidence_vs_score: number;
   consistency_index: number;
   competency_breakdown: CompetencyProgress[];
+}
+
+export interface ThemeProgressSummary {
+  theme_id: string;
+  theme_name: string;
+  theme_order: number;
+  total_items: number;
+  completed_items: number;
+  overall_mastery: number;
+  level: DomainLevel;
+}
+
+export interface ThemesProgressResponse {
+  themes: ThemeProgressSummary[];
+}
+
+export interface ViewItemResponse {
+  interaction_id: string;
+  mastery_level: number;
+  level: DomainLevel;
+  message: string;
+}
+
+export interface Theme_ {
+  id: string;
+  name: string;
+  description?: string;
+  order: number;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface LearningItem_ {
+  id: string;
+  theme_id: string;
+  item_type: string;
+  content: string;
+  item_metadata: Record<string, unknown>;
+  created_at: string;
 }

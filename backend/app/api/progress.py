@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from app.infrastructure.database import get_db
 from app.core.dependencies import get_current_user, require_instructor, require_own_resource # Import new dependencies
 from app.domain.models import User, UserProgress, LearningItem, Theme, LearningEvidence
-from app.domain.schemas import LearningDashboard, NextLearningItemsResponse # Import relevant schemas
+from app.domain.schemas import LearningDashboard, NextLearningItemsResponse, ThemesProgressResponse, ThemeProgressSummary # Import relevant schemas
 from app.domain.services.knowledge_inference import KnowledgeInferenceService
 
 router = APIRouter(prefix="/progress", tags=["Progress"])
@@ -122,6 +122,49 @@ def get_next_learning_items(
         theme_name=active_theme.name,
         learning_items=[item_data["item"] for item_data in selected_items_data] # Assumes item_data is a dict with 'item' key
     )
+
+@router.get("/themes", response_model=ThemesProgressResponse)
+def get_themes_progress(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Returns progress summary for all themes for the current user."""
+    themes = db.query(Theme).filter(Theme.is_active == True).order_by(Theme.order).all()
+    inference_service = KnowledgeInferenceService(db)
+    summaries = []
+
+    for theme in themes:
+        items = db.query(LearningItem).filter(LearningItem.theme_id == theme.id).all()
+        total_items = len(items)
+
+        progresses = db.query(UserProgress).filter(
+            UserProgress.user_id == current_user.id,
+            UserProgress.theme_id == theme.id,
+        ).all()
+
+        progress_map = {p.learning_item_id: p for p in progresses}
+        completed_items = sum(1 for p in progresses if p.mastery_level >= 0.6)
+
+        if total_items > 0 and progresses:
+            total_mastery = sum(p.mastery_level for p in progresses)
+            overall_mastery = total_mastery / total_items
+        else:
+            overall_mastery = 0.0
+
+        level = inference_service.get_level_classification(overall_mastery)
+
+        summaries.append(ThemeProgressSummary(
+            theme_id=theme.id,
+            theme_name=theme.name,
+            theme_order=theme.order,
+            total_items=total_items,
+            completed_items=completed_items,
+            overall_mastery=round(overall_mastery, 2),
+            level=level,
+        ))
+
+    return ThemesProgressResponse(themes=summaries)
+
 
 # Note: The record_interaction endpoint is part of evidence.py's router, not progress.py
 # It's used to trigger updates to UserProgress based on actions.
