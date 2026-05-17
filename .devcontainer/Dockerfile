@@ -12,7 +12,8 @@ RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
 
 # Docker CLI (para usar docker compose desde el devcontainer)
 RUN curl -fsSL https://get.docker.com | bash - \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && usermod -aG docker vscode
 
 # Convenience symlinks
 RUN ln -sf /usr/bin/python3.12 /usr/local/bin/python3 && \
