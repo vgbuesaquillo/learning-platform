@@ -18,38 +18,7 @@ services:
       ENVIRONMENT: development
       NEXT_PUBLIC_API_URL: http://localhost:8000
       NEXT_PUBLIC_APP_NAME: LearnPath
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
     ports:
       - "3000:3000"
       - "8000:8000"
     command: sleep infinity
-
-  db:
-    image: postgres:15-alpine
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: learning
-    ports:
-      - "5432:5432"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d learning"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-
-  redis:
-    image: redis:7-alpine
-    restart: unless-stopped
-    ports:
-      - "6379:6379"
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 3s
-      retries: 5
